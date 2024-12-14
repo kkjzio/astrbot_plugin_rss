@@ -1,7 +1,7 @@
 import aiohttp, time, re, logging
 from lxml import etree
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from util.plugin_dev.api.v1.bot import Context, AstrMessageEvent, CommandResult
+from astrbot.api.all import Context, AstrMessageEvent, CommandResult
 from .data_handler import DataHandler
 from .rss import RSSItem
 from typing import List
