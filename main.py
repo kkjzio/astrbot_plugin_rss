@@ -38,7 +38,7 @@ class Main:
         }
         
     async def parse_channel_info(self, url):
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(url) as resp:
                 if resp.status != 200:
                     return None
@@ -78,7 +78,7 @@ class Main:
         
     async def poll_rss(self, url: str, user: str, num: int = -1, after_timestamp: int = 0, after_link: str = "") -> List[RSSItem]:
         '''从站点拉取RSS信息'''
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(url) as resp:
                 if resp.status != 200:
                     self.logger.error(f"rss: 无法正常打开站点 {url}")
