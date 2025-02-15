@@ -1,4 +1,7 @@
-import aiohttp, time, re, logging
+import aiohttp
+import time
+import re
+import logging
 from lxml import etree
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from astrbot.api.all import Context, AstrMessageEvent, CommandResult
@@ -44,6 +47,12 @@ class Main:
             
     async def cron_task_callback(self, url: str, user: str):
         '''定时任务回调'''
+        
+        if url not in self.data_handler.data:
+            return
+        if user not in self.data_handler.data[url]["subscribers"]:
+            return
+        
         self.logger.info(f"RSS 定时任务触发: {url} - {user}")
         last_update = self.data_handler.data[url]["subscribers"][user]["last_update"]
         latest_link = self.data_handler.data[url]["subscribers"][user]["latest_link"]
@@ -282,9 +291,11 @@ class Main:
         if len(args) < 3:
             return CommandResult().message("参数不足")
         idx = int(args[2])
-        keys = list(self.data_handler.data.keys())
-        if idx < 0 or idx >= len(keys):
+        subs_urls = self.data_handler.get_subs_channel_url(message.unified_msg_origin)
+        if idx < 0 or idx >= len(subs_urls):
             return CommandResult().message("索引越界, 请使用 /rss list 查看已经添加的订阅").use_t2i(False)
-        self.data_handler.data.pop(keys[idx])
+        url = subs_urls[idx]
+        self.data_handler.data[url]["subscribers"].pop(message.unified_msg_origin)
+        
         self.data_handler.save_data()
         return CommandResult().message("删除成功")
