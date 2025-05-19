@@ -73,7 +73,7 @@ Cron 表达式格式：`* * * * *`，分别表示分钟、小时、日、月、�
 
 ## 配置
 
-插件成功启动后，配置文件位于 `data/astrbot_plugin_rss_data.json`]。
+插件成功启动后，配置文件位于 `data/astrbot_plugin_rss_data.json`。
 
 其中 `settings` 部分为插件配置，目前支持的配置项有：
 

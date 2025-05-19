@@ -47,17 +47,19 @@ class RssPlugin(Star):
         self.scheduler = AsyncIOScheduler()
         self.scheduler.start()
 
-        # 为每个订阅添加定时任务
-        for url, info in self.data_handler.data.items():
-            if url == "rsshub_endpoints" or url == "settings":
-                continue
-            for user, sub_info in info["subscribers"].items():
-                self.scheduler.add_job(
-                    self.cron_task_callback,
-                    "cron",
-                    **self.parse_cron_expr(sub_info["cron_expr"]),
-                    args=[url, user],
-                )
+        self._fresh_asyncIOScheduler()
+
+        # # 为每个订阅添加定时任务
+        # for url, info in self.data_handler.data.items():
+        #     if url == "rsshub_endpoints" or url == "settings":
+        #         continue
+        #     for user, sub_info in info["subscribers"].items():
+        #         self.scheduler.add_job(
+        #             self.cron_task_callback,
+        #             "cron",
+        #             **self.parse_cron_expr(sub_info["cron_expr"]),
+        #             args=[url, user],
+        #         )
 
     def parse_cron_expr(self, cron_expr: str):
         fields = cron_expr.split(" ")
@@ -261,6 +263,24 @@ class RssPlugin(Star):
 
                 return rss_items
 
+    def _fresh_asyncIOScheduler(self):
+        """刷新定时任务"""
+        # 删除所有定时任务
+        self.logger.info("刷新定时任务")
+        self.scheduler.remove_all_jobs()
+
+        # 为每个订阅添加定时任务
+        for url, info in self.data_handler.data.items():
+            if url == "rsshub_endpoints" or url == "settings":
+                continue
+            for user, sub_info in info["subscribers"].items():
+                self.scheduler.add_job(
+                    self.cron_task_callback,
+                    "cron",
+                    **self.parse_cron_expr(sub_info["cron_expr"]),
+                    args=[url, user],
+                )
+
     async def _add_url(self, url: str, cron_expr: str, message: AstrMessageEvent):
         """内部方法：添加URL订阅的共用逻辑"""
         user = message.unified_msg_origin
@@ -442,13 +462,8 @@ class RssPlugin(Star):
             chan_title = ret["title"]
             chan_desc = ret["description"]
 
-        #TODO：删除原本的定时任务
-        self.scheduler.add_job(
-            self.cron_task_callback,
-            "cron",
-            **self.parse_cron_expr(cron_expr),
-            args=[url, event.unified_msg_origin],
-        )
+        # 刷新定时任务
+        self._fresh_asyncIOScheduler()
 
         yield event.plain_result(
             f"添加成功。频道信息：\n标题: {chan_title}\n描述: {chan_desc}"
@@ -484,13 +499,8 @@ class RssPlugin(Star):
             chan_title = ret["title"]
             chan_desc = ret["description"]
 
-        #TODO：删除原本的定时任务
-        self.scheduler.add_job(
-            self.cron_task_callback,
-            "cron",
-            **self.parse_cron_expr(cron_expr),
-            args=[url, event.unified_msg_origin],
-        )
+        # 刷新定时任务
+        self._fresh_asyncIOScheduler()
 
         yield event.plain_result(
             f"添加成功。频道信息：\n标题: {chan_title}\n描述: {chan_desc}"
@@ -524,6 +534,9 @@ class RssPlugin(Star):
         self.data_handler.data[url]["subscribers"].pop(event.unified_msg_origin)
 
         self.data_handler.save_data()
+
+        # 刷新定时任务
+        self._fresh_asyncIOScheduler()
         yield event.plain_result("删除成功")
 
     @rss.command("get")
