@@ -16,6 +16,7 @@
     "t2i": {
         "description": "是否需要将文字转换为图片发送",
         "type": "bool",
+        "hint": "订阅中的图片内容会丢失",
         "default": false
     },
     "max_items_per_poll": {
