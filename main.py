@@ -49,18 +49,6 @@ class RssPlugin(Star):
 
         self._fresh_asyncIOScheduler()
 
-        # # 为每个订阅添加定时任务
-        # for url, info in self.data_handler.data.items():
-        #     if url == "rsshub_endpoints" or url == "settings":
-        #         continue
-        #     for user, sub_info in info["subscribers"].items():
-        #         self.scheduler.add_job(
-        #             self.cron_task_callback,
-        #             "cron",
-        #             **self.parse_cron_expr(sub_info["cron_expr"]),
-        #             args=[url, user],
-        #         )
-
     def parse_cron_expr(self, cron_expr: str):
         fields = cron_expr.split(" ")
         return {
@@ -118,15 +106,10 @@ class RssPlugin(Star):
                 self.data_handler.data[url]["subscribers"][user]["last_update"] = int(
                     time.time()
                 )
-                self.data_handler.save_data()
                 max_ts = max(max_ts, item.pubDate_timestamp)
 
             # 合并消息发送
             if len(nodes) > 0:
-                # nodesCom = Comp.Nodes(
-                #             nodes=nodes,
-                #             uin=int(session_id)
-                #         )
                 msc = MessageChain(
                     chain=nodes,
                     use_t2i_= self.t2i
@@ -144,7 +127,6 @@ class RssPlugin(Star):
                 self.data_handler.data[url]["subscribers"][user]["last_update"] = int(
                     time.time()
                 )
-                self.data_handler.save_data()
                 max_ts = max(max_ts, item.pubDate_timestamp)
 
         # 更新最后更新时间
@@ -205,15 +187,6 @@ class RssPlugin(Star):
 
                         pic_url_list = self.data_handler.strip_html_pic(description)
                         description = self.data_handler.strip_html(description)
-
-                        # comps =[]
-                        # comps.append(Comp.Plain(description, is_hide_url=self.is_hide_url))
-                        # for pic_url in pic_url_list:
-                        #     base64str = await self.pic_handler.modify_corner_pixel_to_base64(pic_url)
-                        #     comps.append(
-                        #         Comp.Image.fromBase64(base64str)
-                        #         )
-
 
                         if len(description) > self.description_max_length:
                             description = (

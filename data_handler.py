@@ -43,26 +43,6 @@ class DataHandler:
         description = root.xpath("//description")[0].text
         return title, description
 
-
-    # def _process_element(self, element, ordered_content):
-    #     """递归处理HTML元素，保持内容顺序"""
-    #     # 处理文本节点
-    #     if element.name is None and element.string and element.string.strip():
-    #         text = element.string.strip()
-    #         if text:
-    #             ordered_content.append({"type": "text", "content": text})
-    #     # 处理图片节点
-    #     elif element.name == 'img':
-    #         img_src = element.get('src')
-    #         if img_src:
-    #             ordered_content.append({"type": "image", "content": img_src})
-    #     # 递归处理子节点
-    #     for child in element.children:
-    #         if isinstance(child, str):
-    #             # 跳过特殊字符串节点
-    #             continue
-    #         self._process_element(child, ordered_content)
-
     def strip_html_pic(self, html)-> list[str]:
         """解析HTML内容，提取图片地址
         """
@@ -76,25 +56,6 @@ class DataHandler:
                 ordered_content.append(img_src)
 
         return ordered_content
-
-    # def get_limited_comps_text(self, comps, limit=1000):
-    #     """限制文本长度,处理列表中type为text的元素，保证所有的text字符全部加起来最大值不超过限制值,并保留在限制值之前的图片"""
-    #     total_length = 0
-    #     limited_comps = []
-    #     for comp in comps:
-    #         if comp["type"] == "text":
-    #             text = comp["content"]
-    #             text_length = len(text)
-    #             if total_length + text_length > limit:
-    #                 # 超过限制，截断文本
-    #                 text = text[:limit - total_length]
-    #                 # total_length += len(text)
-    #                 limited_comps.append({"type": "text", "content": text + "..."})
-    #                 break
-    #             else:
-    #                 total_length += text_length
-    #         limited_comps.append(comp)
-    #     return limited_comps
 
     def strip_html(self, html):
         """去除HTML标签"""
