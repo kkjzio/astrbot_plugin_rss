@@ -154,12 +154,7 @@ class RssPlugin(Star):
             async with session.get(url) as resp:
                 if resp.status != 200:
                     self.logger.error(f"rss: 无法正常打开站点 {url}")
-                    await self.context.send_message(
-                            user,
-                            MessageEventResult().message(
-                                f"rss 定时任务: 解析 {url} 失败: 无法正常打开站点"
-                            ),
-                        )
+                    return []
                 text = await resp.read()
                 root = etree.fromstring(text)
                 items = root.xpath("//item")
@@ -232,12 +227,6 @@ class RssPlugin(Star):
 
                     except Exception as e:
                         self.logger.error(f"rss: 解析Rss条目 {url} 失败: {str(e)}")
-                        await self.context.send_message(
-                            user,
-                            MessageEventResult().message(
-                                f"rss 定时任务: 解析Rss条目 {url} 失败: {str(e)}"
-                            ),
-                        )
                         break
 
                 return rss_items
