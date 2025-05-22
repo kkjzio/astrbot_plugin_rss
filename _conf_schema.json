@@ -1,0 +1,61 @@
+{
+    "title_max_length": {
+        "description": "推送的标题最大长度。",
+        "type": "int",
+        "hint": "推送的标题最大长度。",
+        "obvious_hint": true,
+        "default": 30
+    },
+    "description_max_length": {
+        "description": "推送的描述最大长度。",
+        "type": "int",
+        "hint": "推送的描述最大长度。",
+        "obvious_hint": true,
+        "default": 500
+    },
+    "t2i": {
+        "description": "是否需要将文字转换为图片发送",
+        "type": "bool",
+        "hint": "订阅中的图片内容会丢失",
+        "default": false
+    },
+    "max_items_per_poll": {
+        "description": "每次获取的最大条目数。",
+        "type": "int",
+        "hint": "每次获取的最大条目数。 -1 表示不限制。",
+        "obvious_hint": true,
+        "default": 3
+    },
+    "is_hide_url": {
+        "description": "是否隐藏链接",
+        "type": "bool",
+        "hint": "如果设置为 true 则在推送的消息中不显示链接。（解决发送链接导致风控）",
+        "obvious_hint": true,
+        "default": false
+    },
+    "pic_config": {
+        "description": "图片相关配置",
+        "type": "object",
+        "hint": "用于配置图片相关的参数",
+        "items": {
+            "is_read_pic": {
+                "description": "是否读取rss链接中的图片",
+                "hint": "如果设置为 true 自动读取rss链接中的图片",
+                "type": "bool",
+                "default": false
+            },
+            "is_adjust_pic": {
+                "description": "是否对图片进行防和谐处理",
+                "type": "bool",
+                "hint": "如果设置为 true 会自动在读取到的图片中的任意四个角的像素点上加上一个随机的像素点",
+                "default": false
+            },
+            "max_pic_item": {
+                "description": "每次获取的最大图片条目数。",
+                "type": "int",
+                "hint": "每次转换图片的最大条目数。 -1 表示不限制。",
+                "default": 3
+            }
+        }
+    }
+}
