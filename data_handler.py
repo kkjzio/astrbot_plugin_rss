@@ -36,7 +36,7 @@ class DataHandler:
         with open(self.config_path, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2, ensure_ascii=False)
 
-    def parse_channel_info(self, text):
+    def parse_channel_text_info(self, text):
         """解析RSS频道信息"""
         root = etree.fromstring(text)
         title = root.xpath("//title")[0].text
