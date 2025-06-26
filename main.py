@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 import time
 import re
 import logging
@@ -60,12 +61,32 @@ class RssPlugin(Star):
         }
 
     async def parse_channel_info(self, url):
-        async with aiohttp.ClientSession(trust_env=True) as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    return None
-                text = await resp.read()
-                return self.data_handler.parse_channel_info(text)
+        headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        connector = aiohttp.TCPConnector(ssl=False)
+        timeout = aiohttp.ClientTimeout(total=30, connect=10)
+        try:
+            async with aiohttp.ClientSession(trust_env=True,
+                                        connector=connector,
+                                        timeout=timeout,
+                                        headers=headers
+                                        ) as session:
+                async with session.get(url) as resp:
+                    if resp.status != 200:
+                        self.logger.error(f"rss: 无法正常打开站点 {url}")
+                        return None
+                    text = await resp.read()
+                    return text
+        except asyncio.TimeoutError:
+            self.logger.error(f"rss: 请求站点 {url} 超时")
+            return None
+        except aiohttp.ClientError as e:
+            self.logger.error(f"rss: 请求站点 {url} 网络错误: {str(e)}")
+            return None
+        except Exception as e:
+            self.logger.error(f"rss: 请求站点 {url} 发生未知错误: {str(e)}")
+            return None
 
     async def cron_task_callback(self, url: str, user: str):
         """定时任务回调"""
@@ -82,7 +103,6 @@ class RssPlugin(Star):
         # 拉取 RSS
         rss_items = await self.poll_rss(
             url,
-            user,
             num=max_items_per_poll,
             after_timestamp=last_update,
             after_link=latest_link,
@@ -144,92 +164,97 @@ class RssPlugin(Star):
     async def poll_rss(
         self,
         url: str,
-        user: str,
         num: int = -1,
         after_timestamp: int = 0,
         after_link: str = "",
     ) -> List[RSSItem]:
         """从站点拉取RSS信息"""
-        async with aiohttp.ClientSession(trust_env=True) as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    self.logger.error(f"rss: 无法正常打开站点 {url}")
-                    return []
-                text = await resp.read()
-                root = etree.fromstring(text)
-                items = root.xpath("//item")
+        text = await self.parse_channel_info(url)
+        if text is None:
+            self.logger.error(f"rss: 无法解析站点 {url} 的RSS信息")
+            return []
+        root = etree.fromstring(text)
+        items = root.xpath("//item")
 
-                cnt = 0
-                rss_items = []
+        cnt = 0
+        rss_items = []
 
-                for item in items:
-                    try:
-                        chan_title = (
-                            self.data_handler.data[url]["info"]["title"]
-                            if url in self.data_handler.data
-                            else "未知频道"
+        for item in items:
+            try:
+                chan_title = (
+                    self.data_handler.data[url]["info"]["title"]
+                    if url in self.data_handler.data
+                    else "未知频道"
+                )
+
+                title = item.xpath("title")[0].text
+                if len(title) > self.title_max_length:
+                    title = title[: self.title_max_length] + "..."
+
+                link = item.xpath("link")[0].text
+                if not re.match(r"^https?://", link):
+                    link = self.data_handler.get_root_url(url) + link
+
+                description = item.xpath("description")[0].text
+
+                pic_url_list = self.data_handler.strip_html_pic(description)
+                description = self.data_handler.strip_html(description)
+
+                if len(description) > self.description_max_length:
+                    description = (
+                        description[: self.description_max_length] + "..."
+                    )
+
+                if item.xpath("pubDate"):
+                    # 根据 pubDate 判断是否为新内容
+                    pub_date = item.xpath("pubDate")[0].text
+                    pub_date_parsed = time.strptime(
+                        pub_date.replace("GMT", "+0000"),
+                        "%a, %d %b %Y %H:%M:%S %z",
+                    )
+                    pub_date_timestamp = int(time.mktime(pub_date_parsed))
+                    if pub_date_timestamp > after_timestamp:
+                        rss_items.append(
+                            RSSItem(
+                                chan_title,
+                                title,
+                                link,
+                                description,
+                                pub_date,
+                                pub_date_timestamp,
+                                pic_url_list
+                            )
                         )
-
-                        title = item.xpath("title")[0].text
-                        if len(title) > self.title_max_length:
-                            title = title[: self.title_max_length] + "..."
-
-                        link = item.xpath("link")[0].text
-                        if not re.match(r"^https?://", link):
-                            link = self.data_handler.get_root_url(url) + link
-
-                        description = item.xpath("description")[0].text
-
-                        pic_url_list = self.data_handler.strip_html_pic(description)
-                        description = self.data_handler.strip_html(description)
-
-                        if len(description) > self.description_max_length:
-                            description = (
-                                description[: self.description_max_length] + "..."
-                            )
-
-                        if item.xpath("pubDate"):
-                            # 根据 pubDate 判断是否为新内容
-                            pub_date = item.xpath("pubDate")[0].text
-                            pub_date_parsed = time.strptime(
-                                pub_date.replace("GMT", "+0000"),
-                                "%a, %d %b %Y %H:%M:%S %z",
-                            )
-                            pub_date_timestamp = int(time.mktime(pub_date_parsed))
-                            if pub_date_timestamp > after_timestamp:
-                                rss_items.append(
-                                    RSSItem(
-                                        chan_title,
-                                        title,
-                                        link,
-                                        description,
-                                        pub_date,
-                                        pub_date_timestamp,
-                                        pic_url_list
-                                    )
-                                )
-                                cnt += 1
-                                if num != -1 and cnt >= num:
-                                    break
-                            else:
-                                break
-                        else:
-                            # 根据 link 判断是否为新内容
-                            if link != after_link:
-                                rss_items.append(
-                                    RSSItem(chan_title, title, link, description, "", 0, pic_url_list)
-                                )
-                                cnt += 1
-                                if num != -1 and cnt >= num:
-                                    break
-                            else:
-                                break
-
-                    except Exception as e:
-                        self.logger.error(f"rss: 解析Rss条目 {url} 失败: {str(e)}")
+                        cnt += 1
+                        if num != -1 and cnt >= num:
+                            break
+                    else:
+                        break
+                else:
+                    # 根据 link 判断是否为新内容
+                    if link != after_link:
+                        rss_items.append(
+                            RSSItem(chan_title, title, link, description, "", 0, pic_url_list)
+                        )
+                        cnt += 1
+                        if num != -1 and cnt >= num:
+                            break
+                    else:
                         break
 
-                return rss_items
+            except Exception as e:
+                self.logger.error(f"rss: 解析Rss条目 {url} 失败: {str(e)}")
+                break
+
+        return rss_items
+
+    def parse_rss_url(self, url: str) -> str:
+        """解析RSS URL，确保以http或https开头"""
+        if not re.match(r"^https?://", url):
+            if not url.startswith("/"):
+                url = "/" + url
+            url = "https://" + url
+        return url
 
     def _fresh_asyncIOScheduler(self):
         """刷新定时任务"""
@@ -253,7 +278,7 @@ class RssPlugin(Star):
         """内部方法：添加URL订阅的共用逻辑"""
         user = message.unified_msg_origin
         if url in self.data_handler.data:
-            latest_item = await self.poll_rss(url, user, 1)
+            latest_item = await self.poll_rss(url)
             self.data_handler.data[url]["subscribers"][user] = {
                 "cron_expr": cron_expr,
                 "last_update": latest_item[0].pubDate_timestamp,
@@ -261,8 +286,9 @@ class RssPlugin(Star):
             }
         else:
             try:
-                title, desc = await self.parse_channel_info(url)
-                latest_item = await self.poll_rss(url, user, 1)
+                text = await self.parse_channel_info(url)
+                title, desc = self.data_handler.parse_channel_text_info(text)
+                latest_item = await self.poll_rss(url)
             except Exception as e:
                 return message.plain_result(f"解析频道信息失败: {str(e)}")
 
@@ -519,7 +545,7 @@ class RssPlugin(Star):
             yield event.plain_result("索引越界, 请使用 /rss list 查看已经添加的订阅")
             return
         url = subs_urls[idx]
-        rss_items = await self.poll_rss(url, event.unified_msg_origin, 1)
+        rss_items = await self.poll_rss(url)
         if not rss_items:
             yield event.plain_result("没有新的订阅内容")
             return
@@ -531,7 +557,7 @@ class RssPlugin(Star):
         # 区分平台
         if(platform_name == "aiocqhttp"):
             node = Comp.Node(
-                    uin=int(session_id),
+                    uin=0,
                     name="Astrbot",
                     content=comps
                 )
