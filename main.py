@@ -43,6 +43,7 @@ class RssPlugin(Star):
         self.is_read_pic= config.get("pic_config").get("is_read_pic")
         self.is_adjust_pic= config.get("pic_config").get("is_adjust_pic")
         self.max_pic_item = config.get("pic_config").get("max_pic_item")
+        self.is_compose = config.get("compose")
 
         self.pic_handler = RssImageHandler(self.is_adjust_pic)
         self.scheduler = AsyncIOScheduler()
@@ -113,7 +114,7 @@ class RssPlugin(Star):
         platform_name,message_type,session_id = user.split(":")
 
         # 分平台处理消息
-        if platform_name == "aiocqhttp":
+        if platform_name == "aiocqhttp" and self.is_compose:
             nodes = []
             for item in rss_items:
                 comps = await self._get_chain_components(item)
@@ -555,7 +556,7 @@ class RssPlugin(Star):
         # 构造返回消息链
         comps = await self._get_chain_components(item)
         # 区分平台
-        if(platform_name == "aiocqhttp"):
+        if(platform_name == "aiocqhttp" and self.is_compose):
             node = Comp.Node(
                     uin=0,
                     name="Astrbot",

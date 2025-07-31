@@ -1,17 +1,23 @@
 {
     "title_max_length": {
-        "description": "推送的标题最大长度。",
+        "description": "推送的标题最大长度，超过会被截取",
         "type": "int",
         "hint": "推送的标题最大长度。",
         "obvious_hint": true,
         "default": 30
     },
     "description_max_length": {
-        "description": "推送的描述最大长度。",
+        "description": "推送的描述最大长度，超过会被截取",
         "type": "int",
         "hint": "推送的描述最大长度。",
         "obvious_hint": true,
         "default": 500
+    },
+    "compose": {
+        "description": "（仅限qq）是否将消息合并，以转发的方式组合发送",
+        "type": "bool",
+        "hint": "是否将消息合并，以转发的方式组合发送",
+        "default": true
     },
     "t2i": {
         "description": "是否需要将文字转换为图片发送",
